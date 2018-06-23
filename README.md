@@ -6,3 +6,6 @@ how to start :
 2. clone this repo
 3. import sql on db folder
 4. read this doc to run flask http://flask.pocoo.org/docs/1.0/quickstart/
+
+
+mobile implementation at this repo https://github.com/RZulfikri/tanya-resep
