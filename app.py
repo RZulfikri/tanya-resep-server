@@ -37,7 +37,7 @@ def bahan():
 
     if contain is not None:
       contain = ast.literal_eval(contain)
-      query = 'SELECT bahan.id_bahan, bahan.nama_bahan FROM `bahan` LEFT JOIN `masakan_bahan` ON bahan.id_bahan = masakan_bahan.id_bahan'
+      query = 'SELECT bahan.id_bahan, bahan.nama_bahan FROM `bahan` LEFT JOIN `masakan_bahan` ON bahan.id_bahan = masakan_bahan.id_bahan '
       listIdMasakan = cariListIdMasakanByBahan(contain)
       
       for idx, idMasakan in enumerate(listIdMasakan):
@@ -63,8 +63,8 @@ def bahan():
         
         if contain is not None:
           query = query + containQuery + ' GROUP BY bahan.id_bahan ORDER BY bahan.nama_bahan ASC'
-
-    print(query)
+    else:
+      query = query + ' ORDER BY bahan.nama_bahan ASC'
 
     cur = mysql.connection.cursor()
     cur.execute(query)
@@ -83,19 +83,23 @@ def resep():
   # bahan should be bahan id (array of string)
   # if no params api will return all resep
   bahan = request.args.get('bahan')
+  resepMemungkinkan = []
 
   query = 'SELECT * FROM masakan'
   if bahan is not None:
     bahan = ast.literal_eval(bahan)
-    resepMemungkinkan = []
     for item in bahan:
-      resepMemungkinkan.append(cariIdMasakanbyBahanId(item))
+      masakanIdList = cariIdMasakanbyBahanId(item)
+      for masakanId in masakanIdList:
+        # if masakanId not in resepMemungkinkan:
+        resepMemungkinkan.append(masakanId[0])
 
     resepMemungkinkan = Counter(resepMemungkinkan)
-    resepPalingMemungkinkan = resepMemungkinkan.most_common(1)
-    idResep = resepPalingMemungkinkan[0][0]
-
-    query = query + ' WHERE id_masakan=' + str(idResep)
+    query = query + ' WHERE '
+    for idx, idMasakan in enumerate(resepMemungkinkan):
+      query = query + 'id_masakan=' + str(idMasakan) + ' '
+      if idx < (len(resepMemungkinkan) - 1): 
+        query = query + 'OR '
 
   cur = mysql.connection.cursor()
   cur.execute(query)
@@ -106,8 +110,11 @@ def resep():
     resep.append({
       'id': data[0],
       'judul': data[1],
-      'photo': data[2]
+      'photo': data[2],
+      'bahan_cocok': resepMemungkinkan[data[0]]
     })
+
+  resep = sorted(resep, key=lambda item: item['id'], reverse=True)
 
   return jsonify(data=resep, error=False)
 
@@ -129,6 +136,7 @@ def resepDetail():
       'id': data[0],
       'judul': data[1],
       'photo': data[2],
+      'resep': data[3],
       'bahan': cariBahanByIdMasakan(idMasakan)
     }
 
@@ -143,8 +151,8 @@ def cariIdMasakanbyBahanId(id = None):
     query = 'SELECT id_masakan from masakan_bahan where id_bahan = ' + str(id)
     cur = mysql.connection.cursor()
     cur.execute(query)
-    data = cur.fetchone()
-    return data[0]
+    data = cur.fetchall()
+    return data
 
 # function to get all masakan by id bahan
 def cariListIdMasakanByBahan(bahan = None):
